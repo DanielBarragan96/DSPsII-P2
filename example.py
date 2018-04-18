@@ -2,7 +2,7 @@ import wave, struct
 import socket
 import sys
 
-waveFile = wave.open('sine.wav', 'r')
+waveFile = wave.open('sine.wav', 'rb')
 
 length = waveFile.getnframes() 
     
@@ -29,12 +29,14 @@ except:
 sock.connect((UDP_IP,UDP_PORT))
 
 waveData = waveFile.readframes(1)
-data = struct.unpack("<h", waveData)
+#https://docs.python.org/2/library/struct.html
+data = struct.unpack("<h", waveData) #little endian(<h) y short (h)
 print(int(data[0]))
 
 try:
     sock.send(MESSAGE.encode())
     #sock.send(int(data[0]))
+    #sock.send(data[0])
     #sock.send(waveFile.readframes(1))
 except socket.error:
     print('Error Send')
