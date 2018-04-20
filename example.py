@@ -5,7 +5,7 @@ import math
 import numpy as np
 import soundfile as sf
 
-rms = [np.sqrt(np.mean(block**2)) for block in sf.blocks('sine.wav', blocksize=1024, overlap = 160)]
+rms = [np.sqrt(np.mean(block**2)) for block in sf.blocks('sine.wav', blocksize=1024, overlap = 1000)]
 
 UDP_IP = "192.168.0.101"
 UDP_PORT = 50009
