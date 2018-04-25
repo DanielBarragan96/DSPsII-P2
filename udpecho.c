@@ -54,13 +54,35 @@ server_thread(void *arg)
 
 	LWIP_UNUSED_ARG(arg);
 	conn = netconn_new(NETCONN_UDP);
-	netconn_bind(conn, IP_ADDR_ANY, 50000);
+	netconn_bind(conn, IP_ADDR_ANY, 50007);
 	//LWIP_ERROR("udpecho: invalid conn", (conn != NULL), return;);
+	uint16_t total = 0;
+	uint16_t *p;
+	p = &total;
 
 	while (1)
 	{
 		netconn_recv(conn, &buf);
 		netbuf_data(buf, (void**)&msg, &len);
+
+		total = 0;
+		uint16_t val_0 = *(msg) -48;
+		uint16_t val_1 = *(msg+1) -48;
+		uint16_t val_2 = *(msg+2) -48;
+		uint16_t val_3 = *(msg+3) -48;
+		uint16_t val_4 = *(msg+4) -48;
+
+		if(val_0<10)
+			total = val_0 + (total*10);
+		if(val_1<10)
+			total = val_1 + (total*10);
+		if(val_2<10)
+			total = val_2 + (total*10);
+		if(val_3<10)
+			total = val_3 + (total*10);
+		if(val_4<10)
+			total = val_4 + (total*10);
+
 		netbuf_delete(buf);
 
 	}
