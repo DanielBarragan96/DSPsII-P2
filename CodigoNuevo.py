@@ -13,7 +13,7 @@ MESSAGE = "Hello World!"
 #print "UDP target IP:", UDP_IP
 #print "UDP target port:", UDP_PORT
 #print "message:", MESSAGE
-SIZE = 225;
+SIZE = 400;
 Ns = SIZE;
 Ms = 0;
 Nsl = 0;
@@ -56,11 +56,11 @@ while True:
         sock2.sendto(newdata[Nsl:Ns], (UDP_IP, UDP_PORT))
         sock3.sendto(newdata[Nsl:Ns], (UDP_IP, UDP_PORT))
         sock4.sendto(newdata[Nsl:Ns], (UDP_IP, UDP_PORT))
-       # print (newdata[Nsl:Ns])
+        print (newdata[Nsl:Ns])
         Nsl = Nsl + SIZE
         Ns = Ns + SIZE
         Ms = Ms + 1
-        time.sleep(0.0190)
+        time.sleep(0.033)
         if(len(newdata) < Ns):
             Nsl = 0
             Ns = SIZE
