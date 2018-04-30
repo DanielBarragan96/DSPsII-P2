@@ -62,11 +62,11 @@ void PIT0_IRQHandler()
     if(!stop_udp)
     {
         DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
-        DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter]));
-        DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter]));
-        DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter]));
+        DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter+1]));
+        DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter+2]));
+        DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter+3]));
 
-        counter = (counter < (ARRAY_SIZE_BUF  -ARRAY_NUMBER)) ? counter + 1 : 0;
+        counter = (counter < (ARRAY_SIZE_BUF  - ARRAY_NUMBER)) ? counter + 1 : 0;
     }
 }
 
