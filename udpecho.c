@@ -43,37 +43,69 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 
-#define ARRAY_SIZE_BUF 225
-#define ARRAY_NUMBER 6
+#define ARRAY_SIZE_BUF 255
+#define ARRAY_NUMBER 3
+
+//SemaphoreHandle_t mutex_i2c;
 
 uint8_t counter = 0;
 uint16_t newbuf[ARRAY_SIZE_BUF] = {0};
 uint16_t newbuf2[ARRAY_SIZE_BUF] = {0};
-uint16_t newbuf3[ARRAY_SIZE_BUF] = {0};
-uint16_t newbuf4[ARRAY_SIZE_BUF] = {0};
 
-bool pit_flag = false;
-bool stop_udp = false;
+uint16_t port = 50007;
+
+volatile bool pit_flag = false;
+volatile bool stop_udp = false;
+volatile bool changePort = true;
 
 void PIT0_IRQHandler()
 {
     PIT_ClearStatusFlags(PIT, kPIT_Chnl_0, kPIT_TimerFlag);
+//    xSemaphoreTake(mutex_i2c,portMAX_DELAY);
     if(!stop_udp)
     {
-        DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
-        DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter+1]));
-        DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter+2]));
-        DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter+3]));
+//        if(pit_flag)
+        if(50 < newbuf[counter])
+            DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
+//        else
+//            DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
 
-        counter = (counter < (ARRAY_SIZE_BUF  - ARRAY_NUMBER)) ? counter + 1 : 0;
+//        DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
+//        DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter+1]));
+//        DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter+2]));
+//        DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter+3]));
+
+//        if((ARRAY_SIZE_BUF  - ARRAY_NUMBER -1) == counter)
+//        {
+//            if(pit_flag)
+//                PRINTF("\n End of DAC Array     1\n");
+//            else
+//                PRINTF("\n End of DAC Array     2\n");
+//        }
+
+        counter = (counter < (ARRAY_SIZE_BUF - ARRAY_NUMBER )) ? counter + 1 : 0;
     }
+    else
+    {
+        DAC_SetBufferValue(DAC0, 0U,0);
+    }
+//    xSemaphoreGive(mutex_i2c);
 }
 
 
-void stopUDP()
+void toogleUDP()
 {
+//    xSemaphoreTake(mutex_i2c,portMAX_DELAY);
     stop_udp = (stop_udp)? false : true;
+//    xSemaphoreGive(mutex_i2c);
+}
+
+void changePortNum(uint16_t newPort)
+{
+    port = newPort;
+    changePort = true;
 }
 
 static void
@@ -88,22 +120,34 @@ server_thread(void *arg)
 
 	LWIP_UNUSED_ARG(arg);
 	conn = netconn_new(NETCONN_UDP);
-	netconn_bind(conn, IP_ADDR_ANY, 50007);
-	//LWIP_ERROR("udpecho: invalid conn", (conn != NULL), return;);
 
+	//LWIP_ERROR("udpecho: invalid conn", (conn != NULL), return;);
+	PIT_StartTimer(PIT, kPIT_Chnl_0);
 	while (1)
 	{
+	    if(changePort)
+	    {
+	        netconn_bind(conn, IP_ADDR_ANY, port);
+	        changePort = false;
+	    }
 		netconn_recv(conn, &buf);
 		netbuf_data(buf, (void**)&msg, &len);
 		//if(false == pit_flag)
-			netbuf_copy(buf, newbuf, sizeof(newbuf));
-			netbuf_copy(buf, newbuf2, sizeof(newbuf));
-			netbuf_copy(buf, newbuf3, sizeof(newbuf));
-			netbuf_copy(buf, newbuf4, sizeof(newbuf));
+//			netbuf_copy(buf, newbuf, sizeof(newbuf));
+//			netbuf_copy(buf, newbuf2, sizeof(newbuf));
+//			netbuf_copy(buf, newbuf3, sizeof(newbuf));
+//			netbuf_copy(buf, newbuf4, sizeof(newbuf));
+
+//		if(pit_flag)
+		    netbuf_copy(buf, newbuf, sizeof(newbuf));
+//		else
+//		    netbuf_copy(buf, newbuf2, sizeof(newbuf));
+
+		counter = 0;
+
+//		pit_flag = (pit_flag == true)?false:true;
 
 
-		PIT_StartTimer(PIT, kPIT_Chnl_0);
-		pit_flag = (pit_flag == true)?false:true;
 		netbuf_delete(buf);
 
 	}
@@ -113,6 +157,10 @@ server_thread(void *arg)
 void
 udpecho_init(void)
 {
+    //create mutex
+//    mutex_i2c = xSemaphoreCreateMutex();
+    //start mutex in signilized status
+//    xSemaphoreGive(mutex_i2c);
 	sys_thread_new("server", server_thread, NULL, 300, 2);
 }
 

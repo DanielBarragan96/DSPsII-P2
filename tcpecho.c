@@ -40,8 +40,8 @@
 
 #include "udpecho.h"
 
-#define ASCII_NUM_MAX 57
-#define ASCII_NUM_MIN 48
+#define ASCII_NUM_MAX '9'
+#define ASCII_NUM_MIN '0'
 
 /*-----------------------------------------------------------------------------------*/
 static void tcpecho_thread (void *arg)
@@ -98,9 +98,11 @@ static void tcpecho_thread (void *arg)
                         else
                         {
                             val = -1;
-                            stopUDP();
+                            toogleUDP();
                         }
                     }
+                    if(0 < val)
+                        changePortNum(val);
 
                     err = netconn_write(newconn, data, len, NETCONN_COPY);
 #if 0

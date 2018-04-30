@@ -212,7 +212,7 @@ int main(void)
 	PIT_EnableInterrupts(PIT, kPIT_Chnl_0, kPIT_TimerInterruptEnable);
 	EnableIRQ(PIT0_IRQn);
 
-	PIT_SetTimerPeriod(PIT, kPIT_Chnl_0, USEC_TO_COUNT(105, CLOCK_GetFreq(kCLOCK_BusClk)));
+	PIT_SetTimerPeriod(PIT, kPIT_Chnl_0, USEC_TO_COUNT(105, CLOCK_GetFreq(kCLOCK_BusClk)));//6000
 
 
     /* Initialize lwIP from thread */
