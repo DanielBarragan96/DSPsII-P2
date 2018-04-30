@@ -32,7 +32,13 @@
 #ifndef LWIP_UDPECHO_H
 #define LWIP_UDPECHO_H
 
-void stopUDP();
+#include "stdint.h"
+
+void audio_init(void *args);
+
+void toogleUDP();
+
+void changePortNum(uint16_t newPort);
 
 void udpecho_init(void);
 
