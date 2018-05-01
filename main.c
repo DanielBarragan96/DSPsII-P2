@@ -132,17 +132,19 @@ static void stack_init(void *arg)
         .macAddress = configMAC_ADDR,
     };
 
+    //Initialize servers variables
     IP4_ADDR(&fsl_netif0_ipaddr, configIP_ADDR0, configIP_ADDR1, configIP_ADDR2, configIP_ADDR3);
     IP4_ADDR(&fsl_netif0_netmask, configNET_MASK0, configNET_MASK1, configNET_MASK2, configNET_MASK3);
     IP4_ADDR(&fsl_netif0_gw, configGW_ADDR0, configGW_ADDR1, configGW_ADDR2, configGW_ADDR3);
 
     tcpip_init(NULL, NULL);
-
+    //configure net connection
     netif_add(&fsl_netif0, &fsl_netif0_ipaddr, &fsl_netif0_netmask, &fsl_netif0_gw,
               &fsl_enet_config0, ethernetif0_init, tcpip_input);
     netif_set_default(&fsl_netif0);
     netif_set_up(&fsl_netif0);
 
+    //indicate server connection succes and information
     PRINTF("************************************************\r\n");
     PRINTF(" IPv4 Address     : %u.%u.%u.%u\r\n", ((u8_t *)&fsl_netif0_ipaddr)[0], ((u8_t *)&fsl_netif0_ipaddr)[1],
            ((u8_t *)&fsl_netif0_ipaddr)[2], ((u8_t *)&fsl_netif0_ipaddr)[3]);
@@ -152,20 +154,21 @@ static void stack_init(void *arg)
            ((u8_t *)&fsl_netif0_gw)[2], ((u8_t *)&fsl_netif0_gw)[3]);
     PRINTF("************************************************\r\n");
 
+    //create udp thread
     udpecho_init();
     PRINTF(" UDP Ready\r\n");
+    //create tcp thread
     tcpecho_init();
     PRINTF(" TCP Ready\r\n");
 
     PRINTF("************************************************\r\n");
-
+    //delete current task
     vTaskDelete(NULL);
 }
 
 static void DAC_ADC_Init(void)
 {
     dac_config_t dacConfigStruct;
-
     /* Configure the DAC. */
     /*
      * dacConfigStruct.referenceVoltageSource = kDAC_ReferenceVoltageSourceVref2;
@@ -183,10 +186,7 @@ int main(void)
 {
 	//Change the Kinetis clock speed
 	 int mcg_clk_hz;
-
 	 unsigned char modeMCG = 0;
-
-
 		#ifndef PLL_DIRECT_INIT
 		   mcg_clk_hz = fei_fbi(SLOW_IRC_FREQ,SLOW_IRC);// 64 Hz ---> 32768
 		   mcg_clk_hz = fbi_fbe(CLK_FREQ_HZ,LOW_POWER,EXTERNAL_CLOCK); // 97.656KHz ---> 50000000
@@ -195,7 +195,6 @@ int main(void)
 		#else
 		      mcg_clk_hz = pll_init(CLK_FREQ_HZ, LOW_POWER, EXTERNAL_CLOCK, PLL0_PRDIV, PLL0_VDIV, PLL_ENABLE);
 		#endif
-
 	   modeMCG = what_mcg_mode();
 
     SYSMPU_Type *base = SYSMPU;
@@ -205,24 +204,22 @@ int main(void)
     /* Disable SYSMPU. */
     base->CESR &= ~SYSMPU_CESR_VLD_MASK;
 
+    //configure PIT
     pit_config_t pit_config = {	true };
-
     PIT_Init(PIT, &pit_config);
-
+	//enable PIT interrupts
 	PIT_EnableInterrupts(PIT, kPIT_Chnl_0, kPIT_TimerInterruptEnable);
 	EnableIRQ(PIT0_IRQn);
-
-	PIT_SetTimerPeriod(PIT, kPIT_Chnl_0, USEC_TO_COUNT(105, CLOCK_GetFreq(kCLOCK_BusClk)));//6000
-
+	//set a pit period depending of the frequency of the input 
+	PIT_SetTimerPeriod(PIT, kPIT_Chnl_0, USEC_TO_COUNT(105, CLOCK_GetFreq(kCLOCK_BusClk)));
 
     /* Initialize lwIP from thread */
     if(sys_thread_new("main", stack_init, NULL, INIT_THREAD_STACKSIZE, INIT_THREAD_PRIO) == NULL)
         LWIP_ASSERT("main(): Task creation failed.", 0);
-
+    //initialize DAC
     DAC_ADC_Init();
-
+    //start Free RTOS
     vTaskStartScheduler();
-
     /* Will not get here unless a task calls vTaskEndScheduler ()*/
     return 0;
 }
