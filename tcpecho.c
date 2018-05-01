@@ -45,6 +45,10 @@
 
 #define TCP_PORT 50008
 
+const char menu[] = {
+		" PAUSA: escribir P\n \rSELECCION AUDIO: escribir el numero de puerto\n \rESTADISTICAS: escribir E\n"
+};
+
 /*-----------------------------------------------------------------------------------*/
 static void tcpecho_thread (void *arg)
 {
@@ -78,7 +82,7 @@ static void tcpecho_thread (void *arg)
             struct netbuf *buf;
             void *data;
             u16_t len;
-
+            err = netconn_write(newconn, (char*)menu, sizeof(menu), NETCONN_COPY);
             while ((err = netconn_recv (newconn, &buf)) == ERR_OK)
             {
                 /*printf("Recved\n");*/
@@ -89,7 +93,7 @@ static void tcpecho_thread (void *arg)
                     uint8_t* valA = (buf->ptr->payload);
                     uint16_t val = 0;
 
-                    for (uint8_t i = 0; (len > i) && (-1 != val); i++)
+                    for (uint8_t i = 0; (len > i); i++)
                     {
                         if ((ASCII_NUM_MAX >= (*(valA + i)))
                                 && (ASCII_NUM_MIN <= (*(valA + i))))
@@ -100,17 +104,20 @@ static void tcpecho_thread (void *arg)
                         else
                         {
                             val = 0;
+                            break;
                         }
                     }
 
                     if(0 != val && TCP_PORT != val)
                         changePortNum(val);
-                    else if(0 == val)
+
+                    else if(0 == val && 1==len)
                     {
-                        toogleUDP();
+                    	if('P' == *(valA))
+                    		toogleUDP();
                     }
 
-                    err = netconn_write(newconn, data, len, NETCONN_COPY);
+                    //err = netconn_write(newconn, data, len, NETCONN_COPY);
 #if 0
                     if (err != ERR_OK)
                     {

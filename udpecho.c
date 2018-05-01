@@ -140,7 +140,7 @@ udpecho_init(void)
     //start mutex in signilized status
     xSemaphoreGive(mutex_audio);
 
-    const TickType_t g_xTimerPeriod = pdMS_TO_TICKS(300); //periodo a interrumpir
+    const TickType_t g_xTimerPeriod = pdMS_TO_TICKS(700); //periodo a interrumpir
     //Interrupt I2C nw
     const char *pcTimerName = "Timer";    //nombre
     const UBaseType_t uxAutoReload = pdFALSE;    //si se hace auto reload
