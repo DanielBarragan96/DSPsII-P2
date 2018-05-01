@@ -46,53 +46,60 @@
 #include "semphr.h"
 #include "timers.h"
 
+//Limits of numbers characters
 #define ARRAY_SIZE_BUF 255
 #define ARRAY_NUMBER 3
+#define SONG_MIN_VAL 50
 
+//Sincronization variables
 SemaphoreHandle_t mutex_audio;
 TimerHandle_t g_timer;
-
+//system variables
 uint8_t counter = 0;
 uint16_t newbuf[ARRAY_SIZE_BUF] = {0};
-uint16_t newbuf2[ARRAY_SIZE_BUF] = {0};
-
+//port of UDP, default value to 50007
 uint16_t port = 50007;
-
+//flags to control thread flow
 volatile static bool pit_flag = false;
 volatile static bool stop_udp = false;
 volatile static bool changePort = true;
 volatile static bool stop_dac = false;
 
+//This function is called when the last UDP package was received 700 mseg before.
 void TimerCallback (TimerHandle_t timeIn)
 {
     stop_dac = true;
 }
 
+//This function is called whenever the PIT has an interruption
 void PIT0_IRQHandler()
 {
+    //Clear interruption flag
     PIT_ClearStatusFlags(PIT, kPIT_Chnl_0, kPIT_TimerFlag);
+    //if we want to stop sending any audio
     if(stop_udp || stop_dac)
-    {
+    {//send 0 trought the DAC
         DAC_SetBufferValue(DAC0, 0U,0);
     }
     else
-    {
-        if(50 < newbuf[counter])
+    {//if the value is more than 50 (reduce  noise)
+        if(SONG_MIN_VAL < newbuf[counter])//send value throught the DAC
             DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
-
-        counter = (counter < (ARRAY_SIZE_BUF - ARRAY_NUMBER )) ? counter + 1 : 0;
+    //increse counter of the audio
+    counter = (counter < (ARRAY_SIZE_BUF - ARRAY_NUMBER )) ? counter + 1 : 0;
     }
 }
 
-
+//Change the song from pause to play and vice versa
 void toogleUDP()
 {
     stop_udp = (stop_udp)? false : true;
 }
-
+//update UDP port
 void changePortNum(uint16_t newPort)
 {
     port = newPort;
+    //indicate that we want to change the flag
     changePort = true;
 }
 
@@ -101,37 +108,41 @@ server_thread(void *arg)
 {
     struct netconn *conn;
     struct netbuf *buf;
-
     char *msg;
-
     uint16_t len;
 
     LWIP_UNUSED_ARG(arg);
+    //create new connection
     conn = netconn_new(NETCONN_UDP);
-
+    //start the pit to keep sending audio trought the DAC
     PIT_StartTimer(PIT, kPIT_Chnl_0);
     while (1)
-    {
+    {   
+        //Start timer to check if the UDP stop sending audio
         xTimerStart(g_timer, portMAX_DELAY);
+        //if we wat toupdate the UDP port
         if(changePort)
-        {
+        {//bind to new port
             netconn_bind(conn, IP_ADDR_ANY, port);
+            //deactivate flag
             changePort = false;
         }
+        //wait for info sent
         netconn_recv(conn, &buf);
         netbuf_data(buf, (void**)&msg, &len);
-
+        //store audio received
         netbuf_copy(buf, newbuf, sizeof(newbuf));
-
+        //reset audio counter
         counter = 0;
+        //stop timer to indicate the system received new audio
         xTimerStop(g_timer, portMAX_DELAY);
+        //keep sending info trought the DAC
         stop_dac = false;
+        //delete buffer
         netbuf_delete(buf);
-
     }
 }
 
-/*-----------------------------------------------------------------------------------*/
 void
 udpecho_init(void)
 {
@@ -140,6 +151,7 @@ udpecho_init(void)
     //start mutex in signilized status
     xSemaphoreGive(mutex_audio);
 
+    //Initialize system timer to check UDP sending status
     const TickType_t g_xTimerPeriod = pdMS_TO_TICKS(700); //periodo a interrumpir
     //Interrupt I2C nw
     const char *pcTimerName = "Timer";    //nombre
@@ -149,6 +161,7 @@ udpecho_init(void)
     //se crea el timer, es global, tipo TimerHandle_t
     g_timer = xTimerCreate (pcTimerName, g_xTimerPeriod, uxAutoReload,
             pvTimerID, pxCallbackFunction);
+    //create UDP thread
     sys_thread_new("server", server_thread, NULL, 300, 2);
 }
 
