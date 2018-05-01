@@ -43,6 +43,8 @@
 #define ASCII_NUM_MAX '9'
 #define ASCII_NUM_MIN '0'
 
+#define TCP_PORT 50008
+
 /*-----------------------------------------------------------------------------------*/
 static void tcpecho_thread (void *arg)
 {
@@ -57,7 +59,7 @@ static void tcpecho_thread (void *arg)
     netconn_bind(conn, IP6_ADDR_ANY, 7);
 #else /* LWIP_IPV6 */
     conn = netconn_new(NETCONN_TCP);
-    netconn_bind (conn, IP_ADDR_ANY, 50008);
+    netconn_bind (conn, IP_ADDR_ANY, TCP_PORT);
 #endif /* LWIP_IPV6 */
     LWIP_ERROR("tcpecho: invalid conn", (conn != NULL), return;);
 
@@ -97,12 +99,16 @@ static void tcpecho_thread (void *arg)
                         }
                         else
                         {
-                            val = -1;
-                            toogleUDP();
+                            val = 0;
                         }
                     }
-                    if(0 < val)
+
+                    if(0 != val && TCP_PORT != val)
                         changePortNum(val);
+                    else if(0 == val)
+                    {
+                        toogleUDP();
+                    }
 
                     err = netconn_write(newconn, data, len, NETCONN_COPY);
 #if 0
