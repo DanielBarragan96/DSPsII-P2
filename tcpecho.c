@@ -93,6 +93,7 @@ static void tcpecho_thread (void *arg)
                     uint8_t* valA = (buf->ptr->payload);
                     uint16_t val = 0;
 
+                    /* If the value of the received data is a number*/
                     for (uint8_t i = 0; (len > i); i++)
                     {
                         if ((ASCII_NUM_MAX >= (*(valA + i)))
@@ -108,11 +109,14 @@ static void tcpecho_thread (void *arg)
                         }
                     }
 
+                    /* If the value of the received data is a number and not the same as our TCP port*/
                     if(0 != val && TCP_PORT != val)
                         changePortNum(val);
 
+                    /* If the value of the received data is just a letter*/
                     else if(0 == val && 1==len)
                     {
+                    	/* We check if the letter recived is P for pause*/
                     	if('P' == *(valA))
                     		toogleUDP();
                     }
@@ -128,6 +132,7 @@ static void tcpecho_thread (void *arg)
                 while (netbuf_next (buf) >= 0);
                 netbuf_delete (buf);
             }
+
             /*printf("Got EOF, looping\n");*/
             /* Close connection and discard connection identifier. */
             netconn_close (newconn);

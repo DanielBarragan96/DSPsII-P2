@@ -54,6 +54,7 @@
 
 #include "fsl_pit.h"
 #include "fsl_dac.h"
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -92,33 +93,21 @@
 /*! @brief Priority of the temporary lwIP initialization thread. */
 #define INIT_THREAD_PRIO DEFAULT_THREAD_PRIO
 
-/*******************************************************************************
-* Prototypes
-******************************************************************************/
-
-/*******************************************************************************
-* Variables
-******************************************************************************/
-
-/*******************************************************************************
- * Code
- ******************************************************************************/
-
 /*!
  * @brief Initializes lwIP stack.
  */
-#define CLK_FREQ_HZ 50000000  /* CLKIN0 frequency */
-#define SLOW_IRC_FREQ 32768	/*This is the approximate value for the slow irc*/
-#define FAST_IRC_FREQ 4000000 /*This is the approximate value for the fast irc*/
-#define EXTERNAL_CLOCK 0 /*It defines an external clock*/
-#define PLL_ENABLE 1 /**PLL is enabled*/
-#define PLL_DISABLE 0 /**PLL is disabled*/
-#define CRYSTAL_OSC 1  /*It defines an crystal oscillator*/
-#define LOW_POWER 0     /* Set the oscillator for low power mode */
-#define SLOW_IRC 0 		/* Set the slow IRC */
-#define CLK0_TYPE 0     /* Crystal or canned oscillator clock input */
-#define PLL0_PRDIV 25    /* PLL predivider value */
-#define PLL0_VDIV 50    /* PLL multiplier value*/
+#define CLK_FREQ_HZ 50000000  	/* CLKIN0 frequency */
+#define SLOW_IRC_FREQ 32768		/*This is the approximate value for the slow irc*/
+#define FAST_IRC_FREQ 4000000 	/*This is the approximate value for the fast irc*/
+#define EXTERNAL_CLOCK 0 		/*It defines an external clock*/
+#define PLL_ENABLE 1 			/**PLL is enabled*/
+#define PLL_DISABLE 0 			/**PLL is disabled*/
+#define CRYSTAL_OSC 1  			/*It defines an crystal oscillator*/
+#define LOW_POWER 0     		/* Set the oscillator for low power mode */
+#define SLOW_IRC 0 				/* Set the slow IRC */
+#define CLK0_TYPE 0    		    /* Crystal or canned oscillator clock input */
+#define PLL0_PRDIV 25   	    /* PLL predivider value */
+#define PLL0_VDIV 50   			/* PLL multiplier value*/
 #define PLL_DIRECT_INIT
 
 
@@ -166,14 +155,23 @@ static void stack_init(void *arg)
     vTaskDelete(NULL);
 }
 
+/* Configure the DAC. */
+   /*
+    * dacConfigStruct.referenceVoltageSource = kDAC_ReferenceVoltageSourceVref2;
+    * dacConfigStruct.enableLowPowerMode = false;
+*/
 static void DAC_ADC_Init(void)
 {
     dac_config_t dacConfigStruct;
+<<<<<<< HEAD
+
+=======
     /* Configure the DAC. */
     /*
      * dacConfigStruct.referenceVoltageSource = kDAC_ReferenceVoltageSourceVref2;
      * dacConfigStruct.enableLowPowerMode = false;
      */
+>>>>>>> 4d0001d2824611ab632b7542fac4ba63fa795d1e
     DAC_GetDefaultConfig(&dacConfigStruct);
     DAC_Init(DAC0, &dacConfigStruct);
     DAC_Enable(DAC0, true); /* Enable output. */
@@ -184,7 +182,7 @@ static void DAC_ADC_Init(void)
  */
 int main(void)
 {
-	//Change the Kinetis clock speed
+	/* Change the Kinetis clock speed */
 	 int mcg_clk_hz;
 	 unsigned char modeMCG = 0;
 		#ifndef PLL_DIRECT_INIT
@@ -201,9 +199,21 @@ int main(void)
     BOARD_InitPins();
     BOARD_BootClockRUN();
     BOARD_InitDebugConsole();
+
     /* Disable SYSMPU. */
     base->CESR &= ~SYSMPU_CESR_VLD_MASK;
 
+<<<<<<< HEAD
+    /* Configure PIT */
+    pit_config_t pit_config = {	true };
+    PIT_Init(PIT, &pit_config);
+
+    /* Enable PIT interrupts */
+	PIT_EnableInterrupts(PIT, kPIT_Chnl_0, kPIT_TimerInterruptEnable);
+	EnableIRQ(PIT0_IRQn);
+
+	/* Set a pit period depending of the frequency of the input  */
+=======
     //configure PIT
     pit_config_t pit_config = {	true };
     PIT_Init(PIT, &pit_config);
@@ -211,12 +221,16 @@ int main(void)
 	PIT_EnableInterrupts(PIT, kPIT_Chnl_0, kPIT_TimerInterruptEnable);
 	EnableIRQ(PIT0_IRQn);
 	//set a pit period depending of the frequency of the input 
+>>>>>>> 4d0001d2824611ab632b7542fac4ba63fa795d1e
 	PIT_SetTimerPeriod(PIT, kPIT_Chnl_0, USEC_TO_COUNT(105, CLOCK_GetFreq(kCLOCK_BusClk)));
 
     /* Initialize lwIP from thread */
     if(sys_thread_new("main", stack_init, NULL, INIT_THREAD_STACKSIZE, INIT_THREAD_PRIO) == NULL)
         LWIP_ASSERT("main(): Task creation failed.", 0);
+<<<<<<< HEAD
+=======
     //initialize DAC
+>>>>>>> 4d0001d2824611ab632b7542fac4ba63fa795d1e
     DAC_ADC_Init();
     //start Free RTOS
     vTaskStartScheduler();
