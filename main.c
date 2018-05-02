@@ -163,15 +163,7 @@ static void stack_init(void *arg)
 static void DAC_ADC_Init(void)
 {
     dac_config_t dacConfigStruct;
-<<<<<<< HEAD
 
-=======
-    /* Configure the DAC. */
-    /*
-     * dacConfigStruct.referenceVoltageSource = kDAC_ReferenceVoltageSourceVref2;
-     * dacConfigStruct.enableLowPowerMode = false;
-     */
->>>>>>> 4d0001d2824611ab632b7542fac4ba63fa795d1e
     DAC_GetDefaultConfig(&dacConfigStruct);
     DAC_Init(DAC0, &dacConfigStruct);
     DAC_Enable(DAC0, true); /* Enable output. */
@@ -203,7 +195,6 @@ int main(void)
     /* Disable SYSMPU. */
     base->CESR &= ~SYSMPU_CESR_VLD_MASK;
 
-<<<<<<< HEAD
     /* Configure PIT */
     pit_config_t pit_config = {	true };
     PIT_Init(PIT, &pit_config);
@@ -213,26 +204,13 @@ int main(void)
 	EnableIRQ(PIT0_IRQn);
 
 	/* Set a pit period depending of the frequency of the input  */
-=======
-    //configure PIT
-    pit_config_t pit_config = {	true };
-    PIT_Init(PIT, &pit_config);
-	//enable PIT interrupts
-	PIT_EnableInterrupts(PIT, kPIT_Chnl_0, kPIT_TimerInterruptEnable);
-	EnableIRQ(PIT0_IRQn);
-	//set a pit period depending of the frequency of the input 
->>>>>>> 4d0001d2824611ab632b7542fac4ba63fa795d1e
 	PIT_SetTimerPeriod(PIT, kPIT_Chnl_0, USEC_TO_COUNT(105, CLOCK_GetFreq(kCLOCK_BusClk)));
 
     /* Initialize lwIP from thread */
     if(sys_thread_new("main", stack_init, NULL, INIT_THREAD_STACKSIZE, INIT_THREAD_PRIO) == NULL)
         LWIP_ASSERT("main(): Task creation failed.", 0);
-<<<<<<< HEAD
-=======
-    //initialize DAC
->>>>>>> 4d0001d2824611ab632b7542fac4ba63fa795d1e
     DAC_ADC_Init();
-    //start Free RTOS
+
     vTaskStartScheduler();
     /* Will not get here unless a task calls vTaskEndScheduler ()*/
     return 0;
