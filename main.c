@@ -46,7 +46,9 @@
 #include "lwip/tcpip.h"
 #include "netif/ethernet.h"
 #include "ethernetif.h"
+#include "fsl_port.h"
 #include "board.h"
+#include "fsl_gpio.h"
 
 #include "fsl_device_registers.h"
 #include "pin_mux.h"
@@ -54,7 +56,6 @@
 
 #include "fsl_pit.h"
 #include "fsl_dac.h"
-
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -93,21 +94,33 @@
 /*! @brief Priority of the temporary lwIP initialization thread. */
 #define INIT_THREAD_PRIO DEFAULT_THREAD_PRIO
 
+/*******************************************************************************
+* Prototypes
+******************************************************************************/
+
+/*******************************************************************************
+* Variables
+******************************************************************************/
+
+/*******************************************************************************
+ * Code
+ ******************************************************************************/
+
 /*!
  * @brief Initializes lwIP stack.
  */
-#define CLK_FREQ_HZ 50000000  	/* CLKIN0 frequency */
-#define SLOW_IRC_FREQ 32768		/*This is the approximate value for the slow irc*/
-#define FAST_IRC_FREQ 4000000 	/*This is the approximate value for the fast irc*/
-#define EXTERNAL_CLOCK 0 		/*It defines an external clock*/
-#define PLL_ENABLE 1 			/**PLL is enabled*/
-#define PLL_DISABLE 0 			/**PLL is disabled*/
-#define CRYSTAL_OSC 1  			/*It defines an crystal oscillator*/
-#define LOW_POWER 0     		/* Set the oscillator for low power mode */
-#define SLOW_IRC 0 				/* Set the slow IRC */
-#define CLK0_TYPE 0    		    /* Crystal or canned oscillator clock input */
-#define PLL0_PRDIV 25   	    /* PLL predivider value */
-#define PLL0_VDIV 50   			/* PLL multiplier value*/
+#define CLK_FREQ_HZ 50000000  /* CLKIN0 frequency */
+#define SLOW_IRC_FREQ 32768	/*This is the approximate value for the slow irc*/
+#define FAST_IRC_FREQ 4000000 /*This is the approximate value for the fast irc*/
+#define EXTERNAL_CLOCK 0 /*It defines an external clock*/
+#define PLL_ENABLE 1 /**PLL is enabled*/
+#define PLL_DISABLE 0 /**PLL is disabled*/
+#define CRYSTAL_OSC 1  /*It defines an crystal oscillator*/
+#define LOW_POWER 0     /* Set the oscillator for low power mode */
+#define SLOW_IRC 0 		/* Set the slow IRC */
+#define CLK0_TYPE 0     /* Crystal or canned oscillator clock input */
+#define PLL0_PRDIV 25    /* PLL predivider value */
+#define PLL0_VDIV 50    /* PLL multiplier value*/
 #define PLL_DIRECT_INIT
 
 
@@ -121,19 +134,17 @@ static void stack_init(void *arg)
         .macAddress = configMAC_ADDR,
     };
 
-    //Initialize servers variables
     IP4_ADDR(&fsl_netif0_ipaddr, configIP_ADDR0, configIP_ADDR1, configIP_ADDR2, configIP_ADDR3);
     IP4_ADDR(&fsl_netif0_netmask, configNET_MASK0, configNET_MASK1, configNET_MASK2, configNET_MASK3);
     IP4_ADDR(&fsl_netif0_gw, configGW_ADDR0, configGW_ADDR1, configGW_ADDR2, configGW_ADDR3);
 
     tcpip_init(NULL, NULL);
-    //configure net connection
+
     netif_add(&fsl_netif0, &fsl_netif0_ipaddr, &fsl_netif0_netmask, &fsl_netif0_gw,
               &fsl_enet_config0, ethernetif0_init, tcpip_input);
     netif_set_default(&fsl_netif0);
     netif_set_up(&fsl_netif0);
 
-    //indicate server connection succes and information
     PRINTF("************************************************\r\n");
     PRINTF(" IPv4 Address     : %u.%u.%u.%u\r\n", ((u8_t *)&fsl_netif0_ipaddr)[0], ((u8_t *)&fsl_netif0_ipaddr)[1],
            ((u8_t *)&fsl_netif0_ipaddr)[2], ((u8_t *)&fsl_netif0_ipaddr)[3]);
@@ -143,27 +154,25 @@ static void stack_init(void *arg)
            ((u8_t *)&fsl_netif0_gw)[2], ((u8_t *)&fsl_netif0_gw)[3]);
     PRINTF("************************************************\r\n");
 
-    //create udp thread
     udpecho_init();
     PRINTF(" UDP Ready\r\n");
-    //create tcp thread
     tcpecho_init();
     PRINTF(" TCP Ready\r\n");
 
     PRINTF("************************************************\r\n");
-    //delete current task
+
     vTaskDelete(NULL);
 }
 
-/* Configure the DAC. */
-   /*
-    * dacConfigStruct.referenceVoltageSource = kDAC_ReferenceVoltageSourceVref2;
-    * dacConfigStruct.enableLowPowerMode = false;
-*/
 static void DAC_ADC_Init(void)
 {
     dac_config_t dacConfigStruct;
 
+    /* Configure the DAC. */
+    /*
+     * dacConfigStruct.referenceVoltageSource = kDAC_ReferenceVoltageSourceVref2;
+     * dacConfigStruct.enableLowPowerMode = false;
+     */
     DAC_GetDefaultConfig(&dacConfigStruct);
     DAC_Init(DAC0, &dacConfigStruct);
     DAC_Enable(DAC0, true); /* Enable output. */
@@ -174,9 +183,12 @@ static void DAC_ADC_Init(void)
  */
 int main(void)
 {
-	/* Change the Kinetis clock speed */
+	//Change the Kinetis clock speed
 	 int mcg_clk_hz;
+
 	 unsigned char modeMCG = 0;
+
+
 		#ifndef PLL_DIRECT_INIT
 		   mcg_clk_hz = fei_fbi(SLOW_IRC_FREQ,SLOW_IRC);// 64 Hz ---> 32768
 		   mcg_clk_hz = fbi_fbe(CLK_FREQ_HZ,LOW_POWER,EXTERNAL_CLOCK); // 97.656KHz ---> 50000000
@@ -185,33 +197,34 @@ int main(void)
 		#else
 		      mcg_clk_hz = pll_init(CLK_FREQ_HZ, LOW_POWER, EXTERNAL_CLOCK, PLL0_PRDIV, PLL0_VDIV, PLL_ENABLE);
 		#endif
+
 	   modeMCG = what_mcg_mode();
 
     SYSMPU_Type *base = SYSMPU;
     BOARD_InitPins();
     BOARD_BootClockRUN();
     BOARD_InitDebugConsole();
-
     /* Disable SYSMPU. */
     base->CESR &= ~SYSMPU_CESR_VLD_MASK;
 
-    /* Configure PIT */
     pit_config_t pit_config = {	true };
+
     PIT_Init(PIT, &pit_config);
 
-    /* Enable PIT interrupts */
 	PIT_EnableInterrupts(PIT, kPIT_Chnl_0, kPIT_TimerInterruptEnable);
 	EnableIRQ(PIT0_IRQn);
 
-	/* Set a pit period depending of the frequency of the input  */
-	PIT_SetTimerPeriod(PIT, kPIT_Chnl_0, USEC_TO_COUNT(105, CLOCK_GetFreq(kCLOCK_BusClk)));
+	PIT_SetTimerPeriod(PIT, kPIT_Chnl_0, USEC_TO_COUNT(45, CLOCK_GetFreq(kCLOCK_BusClk)));//6000
+
 
     /* Initialize lwIP from thread */
     if(sys_thread_new("main", stack_init, NULL, INIT_THREAD_STACKSIZE, INIT_THREAD_PRIO) == NULL)
         LWIP_ASSERT("main(): Task creation failed.", 0);
+
     DAC_ADC_Init();
 
     vTaskStartScheduler();
+
     /* Will not get here unless a task calls vTaskEndScheduler ()*/
     return 0;
 }

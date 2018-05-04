@@ -45,64 +45,53 @@
 #include "task.h"
 #include "semphr.h"
 #include "timers.h"
+#include "fsl_port.h"
+#include "fsl_gpio.h"
 
-/* Limits of numbers characters  */
 #define ARRAY_SIZE_BUF 255
 #define ARRAY_NUMBER 3
-#define SONG_MIN_VAL 50
 
-/* synchronization variables  */
 SemaphoreHandle_t mutex_audio;
 TimerHandle_t g_timer;
 
-/* System variables  */
 uint8_t counter = 0;
 uint16_t newbuf[ARRAY_SIZE_BUF] = {0};
+uint16_t newbuf2[ARRAY_SIZE_BUF] = {0};
 
-/* UDP port default value  */
 uint16_t port = 50007;
 
-/* Flags to control thread flow  */
 volatile static bool pit_flag = false;
 volatile static bool stop_udp = false;
 volatile static bool changePort = true;
 volatile static bool stop_dac = false;
 
-/* This function is called when the last UDP package was received 700 ms before */
 void TimerCallback (TimerHandle_t timeIn)
 {
     stop_dac = true;
 }
 
-/* PIT interrupt handler */
 void PIT0_IRQHandler()
 {
-	/* Clear interruption flag */
     PIT_ClearStatusFlags(PIT, kPIT_Chnl_0, kPIT_TimerFlag);
-
-    /* If we want to stop sending any audio */
     if(stop_udp || stop_dac)
     {
         DAC_SetBufferValue(DAC0, 0U,0);
     }
     else
     {
-    	/* If the value is more than 50 (reduce  noise) */
-        if(SONG_MIN_VAL < newbuf[counter])
+        if(50 < newbuf[counter])
             DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
 
-    /* Increase index of the audio buffer */
-    counter = (counter < (ARRAY_SIZE_BUF - ARRAY_NUMBER )) ? counter + 1 : 0;
+        counter = (counter < (ARRAY_SIZE_BUF - ARRAY_NUMBER )) ? counter + 1 : 0;
     }
 }
 
-/* Change the song from pause to play and vice versa */
+
 void toogleUDP()
 {
     stop_udp = (stop_udp)? false : true;
 }
 
-/* Update UDP port */
 void changePortNum(uint16_t newPort)
 {
     port = newPort;
@@ -114,26 +103,20 @@ server_thread(void *arg)
 {
     struct netconn *conn;
     struct netbuf *buf;
+
     char *msg;
+
     uint16_t len;
 
     LWIP_UNUSED_ARG(arg);
-
-    synchronization
-	/* Create new connection */
     conn = netconn_new(NETCONN_UDP);
 
-	/* Start the pit to keep sending audio through the DAC */
     PIT_StartTimer(PIT, kPIT_Chnl_0);
     while (1)
-    {   
-    	/* Start timer to check if the UDP stopped sending audio */
+    {
         xTimerStart(g_timer, portMAX_DELAY);
-
-        /* If we wat toupdate the UDP port */
         if(changePort)
         {
-        	/* Connect to new port */
             netconn_bind(conn, IP_ADDR_ANY, port);
             changePort = false;
         }
@@ -141,44 +124,35 @@ server_thread(void *arg)
         netconn_recv(conn, &buf);
         netbuf_data(buf, (void**)&msg, &len);
 
-        /* Store received data into buffer */
+
         netbuf_copy(buf, newbuf, sizeof(newbuf));
 
-        /* Reset buffer index value */
         counter = 0;
-
-        /* Stop timer to indicate the system received new audio */
         xTimerStop(g_timer, portMAX_DELAY);
-
-        /* Stop timer to indicate the system received new audio */
         stop_dac = false;
         netbuf_delete(buf);
+
     }
 }
 
+/*-----------------------------------------------------------------------------------*/
 void
 udpecho_init(void)
 {
-
+    //create mutex
     mutex_audio = xSemaphoreCreateMutex();
+    //start mutex in signilized status
     xSemaphoreGive(mutex_audio);
 
-    /* Initialize system timer to check UDP sending status
-     * If the period without receiving data is bigger,
-     * we send 0 through the DAC
-    */
-    const TickType_t g_xTimerPeriod = pdMS_TO_TICKS(700);
-
-    const char *pcTimerName = "Timer";
-    const UBaseType_t uxAutoReload = pdFALSE;
-    void * const pvTimerID = NULL; //task handle, returns an indentifying value for the tasks
+    const TickType_t g_xTimerPeriod = pdMS_TO_TICKS(700); //periodo a interrumpir
+    //Interrupt I2C nw
+    const char *pcTimerName = "Timer";    //nombre
+    const UBaseType_t uxAutoReload = pdFALSE;    //si se hace auto reload
+    void * const pvTimerID = NULL; //handle de las tareas, regresa un valor para identificar la tarea
     TimerCallbackFunction_t pxCallbackFunction = TimerCallback; //callback function
-
-    /* Global TimerHandle_t type timer */
+    //se crea el timer, es global, tipo TimerHandle_t
     g_timer = xTimerCreate (pcTimerName, g_xTimerPeriod, uxAutoReload,
             pvTimerID, pxCallbackFunction);
-
-    /* Create UDP thread */
     sys_thread_new("server", server_thread, NULL, 300, 2);
 }
 
