@@ -10,8 +10,7 @@ UDP_IP = "192.168.0.102"
 UDP_PORT = 50007
 
 #Buffer size
-SIZE = 255;
-LENnewdata = 3218124;
+SIZE = 251;
 
 #Range limits for the buffer
 Ns = SIZE;
@@ -44,7 +43,6 @@ newdata = np.cast[np.uint16](newdata)
 sock = socket.socket(socket.AF_INET,
                              socket.SOCK_DGRAM)
 sock.connect((UDP_IP, UDP_PORT))
-
 
 while True:
     # Send specific range of values from our buffer
