@@ -64,6 +64,7 @@ volatile static bool pit_flag = false;
 volatile static bool stop_udp = false;
 volatile static bool changePort = true;
 volatile static bool stop_dac = false;
+volatile bool pingpong = true;
 
 void TimerCallback (TimerHandle_t timeIn)
 {
@@ -80,7 +81,10 @@ void PIT0_IRQHandler()
     else
     {
         if(50 < newbuf[counter])
-            DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
+        	if(true == pingpong)
+        		DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter]));
+        	else
+        		DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
 
         counter = (counter < (ARRAY_SIZE_BUF - ARRAY_NUMBER )) ? counter + 1 : 0;
     }
@@ -122,10 +126,14 @@ server_thread(void *arg)
         }
 
         netconn_recv(conn, &buf);
+        
         netbuf_data(buf, (void**)&msg, &len);
+        pingpong = (pingpong == true)? false:true;
 
-
-        netbuf_copy(buf, newbuf, sizeof(newbuf));
+        if(true == pingpong)
+        	netbuf_copy(buf, newbuf, sizeof(newbuf));
+        else
+        	netbuf_copy(buf, newbuf2, sizeof(newbuf));
 
         counter = 0;
         xTimerStop(g_timer, portMAX_DELAY);
