@@ -48,8 +48,8 @@
 #include "fsl_port.h"
 #include "fsl_gpio.h"
 
-#define ARRAY_SIZE_BUF 255
-#define ARRAY_NUMBER 3
+#define ARRAY_SIZE_BUF 251
+#define ARRAY_NUMBER 2
 
 SemaphoreHandle_t mutex_audio;
 TimerHandle_t g_timer;
