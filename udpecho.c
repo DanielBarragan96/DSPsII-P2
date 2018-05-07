@@ -66,6 +66,8 @@ volatile static bool changePort = true;
 volatile static bool stop_dac = false;
 volatile bool pingpong = true;
 
+struct netconn *conn;
+
 void TimerCallback (TimerHandle_t timeIn)
 {
     stop_dac = true;
@@ -74,20 +76,30 @@ void TimerCallback (TimerHandle_t timeIn)
 void PIT0_IRQHandler()
 {
     PIT_ClearStatusFlags(PIT, kPIT_Chnl_0, kPIT_TimerFlag);
+//    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+//    xSemaphoreTakeFromISR(mutex_audio, &xHigherPriorityTaskWoken);
     if(stop_udp || stop_dac)
     {
         DAC_SetBufferValue(DAC0, 0U,0);
     }
-    else
+    else if(counter < (ARRAY_SIZE_BUF - ARRAY_NUMBER -1))
     {
-        if(50 < newbuf[counter])
-        	if(true == pingpong)
-        		DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter]));
-        	else
-        		DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
+        if((true == pingpong) && (50 < newbuf2[counter]))
+            DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter]));
+        else if(50 < newbuf[counter])
+            DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
+
+//        if(counter == (ARRAY_SIZE_BUF - ARRAY_NUMBER -1))
+//        {
+//            if(pingpong)
+//                PRINTF("end of array ...2\n");
+//            else
+//                PRINTF("end of array \n");
+//        }
 
         counter = (counter < (ARRAY_SIZE_BUF - ARRAY_NUMBER )) ? counter + 1 : 0;
     }
+//    xSemaphoreGiveFromISR(mutex_audio, NULL);
 }
 
 
@@ -98,6 +110,7 @@ void toogleUDP()
 
 void changePortNum(uint16_t newPort)
 {
+    netconn_bind(conn, IP_ADDR_ANY, port);
     port = newPort;
     changePort = true;
 }
@@ -105,7 +118,6 @@ void changePortNum(uint16_t newPort)
 static void
 server_thread(void *arg)
 {
-    struct netconn *conn;
     struct netbuf *buf;
 
     char *msg;
@@ -114,19 +126,16 @@ server_thread(void *arg)
 
     LWIP_UNUSED_ARG(arg);
     conn = netconn_new(NETCONN_UDP);
+    netconn_bind(conn, IP_ADDR_ANY, port);
 
     PIT_StartTimer(PIT, kPIT_Chnl_0);
     while (1)
     {
         xTimerStart(g_timer, portMAX_DELAY);
-        if(changePort)
-        {
-            netconn_bind(conn, IP_ADDR_ANY, port);
-            changePort = false;
-        }
 
         netconn_recv(conn, &buf);
         
+//        xSemaphoreTake(mutex_audio,portMAX_DELAY);
         netbuf_data(buf, (void**)&msg, &len);
         pingpong = (pingpong == true)? false:true;
 
@@ -139,7 +148,7 @@ server_thread(void *arg)
         xTimerStop(g_timer, portMAX_DELAY);
         stop_dac = false;
         netbuf_delete(buf);
-
+//        xSemaphoreGive(mutex_audio);
     }
 }
 
