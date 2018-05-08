@@ -33,7 +33,6 @@
 #ifndef LWIP_TCPECHO_H
 #define LWIP_TCPECHO_H
 
-/* TCP init function */
 void tcpecho_init(void);
 
 #endif /* LWIP_TCPECHO_H */

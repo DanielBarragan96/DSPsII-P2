@@ -48,7 +48,7 @@
 #include "fsl_port.h"
 #include "fsl_gpio.h"
 
-#define ARRAY_SIZE_BUF 251
+#define ARRAY_SIZE_BUF 255
 #define ARRAY_NUMBER 2
 
 SemaphoreHandle_t mutex_audio;
@@ -58,6 +58,8 @@ uint8_t counter = 0;
 uint16_t newbuf[ARRAY_SIZE_BUF] = {0};
 uint16_t newbuf2[ARRAY_SIZE_BUF] = {0};
 
+struct netconn *conn;
+
 uint16_t port = 50007;
 
 volatile static bool pit_flag = false;
@@ -65,8 +67,7 @@ volatile static bool stop_udp = false;
 volatile static bool changePort = true;
 volatile static bool stop_dac = false;
 volatile bool pingpong = true;
-
-struct netconn *conn;
+volatile bool pingpongPIT = true;
 
 void TimerCallback (TimerHandle_t timeIn)
 {
@@ -76,30 +77,26 @@ void TimerCallback (TimerHandle_t timeIn)
 void PIT0_IRQHandler()
 {
     PIT_ClearStatusFlags(PIT, kPIT_Chnl_0, kPIT_TimerFlag);
-//    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-//    xSemaphoreTakeFromISR(mutex_audio, &xHigherPriorityTaskWoken);
     if(stop_udp || stop_dac)
     {
         DAC_SetBufferValue(DAC0, 0U,0);
     }
-    else if(counter < (ARRAY_SIZE_BUF - ARRAY_NUMBER -1))
+    else
     {
-        if((true == pingpong) && (50 < newbuf2[counter]))
-            DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter]));
-        else if(50 < newbuf[counter])
-            DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
-
-//        if(counter == (ARRAY_SIZE_BUF - ARRAY_NUMBER -1))
-//        {
-//            if(pingpong)
-//                PRINTF("end of array ...2\n");
-//            else
-//                PRINTF("end of array \n");
-//        }
+        if(50 < newbuf[counter]){
+        	if(true == pingpongPIT){
+        		DAC_SetBufferValue(DAC0, 0U,(newbuf2[counter]));
+        		pingpongPIT = (pingpongPIT == true)? false:true;
+        	}
+        }
+        	else{
+        		DAC_SetBufferValue(DAC0, 0U,(newbuf[counter]));
+        		pingpongPIT = (pingpongPIT == true)? false:true;
+        	}
+        }
 
         counter = (counter < (ARRAY_SIZE_BUF - ARRAY_NUMBER )) ? counter + 1 : 0;
     }
-//    xSemaphoreGiveFromISR(mutex_audio, NULL);
 }
 
 
@@ -110,9 +107,9 @@ void toogleUDP()
 
 void changePortNum(uint16_t newPort)
 {
-    netconn_bind(conn, IP_ADDR_ANY, port);
     port = newPort;
     changePort = true;
+    netconn_bind(conn, IP_ADDR_ANY, port);
 }
 
 static void
@@ -132,10 +129,8 @@ server_thread(void *arg)
     while (1)
     {
         xTimerStart(g_timer, portMAX_DELAY);
-
         netconn_recv(conn, &buf);
-        
-//        xSemaphoreTake(mutex_audio,portMAX_DELAY);
+
         netbuf_data(buf, (void**)&msg, &len);
         pingpong = (pingpong == true)? false:true;
 
@@ -148,7 +143,7 @@ server_thread(void *arg)
         xTimerStop(g_timer, portMAX_DELAY);
         stop_dac = false;
         netbuf_delete(buf);
-//        xSemaphoreGive(mutex_audio);
+
     }
 }
 

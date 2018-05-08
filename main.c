@@ -214,8 +214,8 @@ int main(void)
 	PIT_EnableInterrupts(PIT, kPIT_Chnl_0, kPIT_TimerInterruptEnable);
 	EnableIRQ(PIT0_IRQn);
 
-	PIT_SetTimerPeriod(PIT, kPIT_Chnl_0, USEC_TO_COUNT(45, CLOCK_GetFreq(kCLOCK_BusClk)));//6000
-
+	//PIT_SetTimerPeriod(PIT, kPIT_Chnl_0, USEC_TO_COUNT(45, CLOCK_GetFreq(kCLOCK_BusClk)));//6000
+	PIT_SetTimerPeriod(PIT, kPIT_Chnl_0, (uint16_t)(CLOCK_GetFreq(kCLOCK_BusClk)/22000));
 
     /* Initialize lwIP from thread */
     if(sys_thread_new("main", stack_init, NULL, INIT_THREAD_STACKSIZE, INIT_THREAD_PRIO) == NULL)
